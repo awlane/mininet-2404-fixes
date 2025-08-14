@@ -102,26 +102,49 @@ function version_ge {
     [ "$1" == "$latest" ]
 }
 
-# Attempt to detect Python version
-PYTHON=${PYTHON:-python}
-PRINTVERSION='import sys; print(sys.version_info)'
-PYTHON_VERSION=unknown
-for python in $PYTHON python2 python3; do
-    if $python -c "$PRINTVERSION" |& grep 'major=2'; then
-        PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
-        break
-    elif $python -c "$PRINTVERSION" |& grep 'major=3'; then
-        PYTHON=$python; PYTHON_VERSION=3; PYPKG=python3
-        break
+# Auto-detect python venv
+if [ -n "$VIRTUAL_ENV" ]; then
+    # We are in a virtual environment; use its Python interpreter
+    PYTHON="${VIRTUAL_ENV}/bin/python"
+    echo "Using virtual environment Python interpreter at $PYTHON"
+
+    # Determine Python version in the virtual environment
+    PRINTVERSION='import sys; print(sys.version_info.major)'
+    PYTHON_VERSION=$($PYTHON -c "$PRINTVERSION")
+
+    if [ "$PYTHON_VERSION" == "2" ]; then
+        PYPKG=python
+    elif [ "$PYTHON_VERSION" == "3" ]; then
+        PYPKG=python3
+    else
+        echo "Unsupported Python version in virtual environment"
+        exit 1
     fi
-done
-if [ "$PYTHON_VERSION" == unknown ]; then
-    echo "Can't find a working python command ('$PYTHON' doesn't work.)"
-    echo "You may wish to export PYTHON or install a working 'python'."
-    exit 1
+else
+    # Fall back to system Python if no virtual environment is detected
+    PYTHON=${PYTHON:-python}
+    echo "No virtual environment detected; using default Python at $(which $PYTHON)"
+    PRINTVERSION='import sys; print(sys.version_info)'
+    PYTHON_VERSION=unknown
+    for python in $PYTHON python2 python3; do
+        if $python -c "$PRINTVERSION" |& grep 'major=2'; then
+            PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
+            break
+        elif $python -c "$PRINTVERSION" |& grep 'major=3'; then
+            PYTHON=$python; PYTHON_VERSION=3; PYPKG=python3
+            break
+        fi
+    done
+    if [ "$PYTHON_VERSION" == unknown ]; then
+        echo "Can't find a working python command ('$PYTHON' doesn't work.)"
+        echo "You may wish to export PYTHON or install a working 'python'."
+        exit 1
+    fi
+
+    echo "Detected Python (${PYTHON}) version ${PYTHON_VERSION}"
 fi
 
-echo "Detected Python (${PYTHON}) version ${PYTHON_VERSION}"
+
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
@@ -174,36 +197,15 @@ function mn_deps {
                         python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
         pf=pyflakes
-        pep8=pep8
+        pep8=pycodestyle
         # Starting around 20.04, installing pyflakes instead of pyflakes3
         # causes Python 2 to be installed, which is exactly NOT what we want.
-        if [ "$DIST" = "Ubuntu" -a `expr $RELEASE '>=' 20.04` = "1" ]; then
-                pf=pyflakes3
-        fi
-        # Debian 11 "bullseye" renamed
-        # * pep8 to python3-pep8
-        # * pyflakes to pyflakes3
-        if [ "$DIST" = "Debian" -a `expr $RELEASE '>=' 11` = "1" ]; then
-                pf=pyflakes3
-                pep8=python3-pep8
-        fi
 
         $install gcc make socat psmisc xterm ssh iperf telnet \
                  ethtool help2man $pf pylint $pep8 \
                  net-tools ${PYPKG}-tk
 
-        # Install pip
-        $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
-        if ! ${PYTHON} -m pip -V; then
-            if [ $PYTHON_VERSION == 2 ]; then
-                wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
-            else
-                wget https://bootstrap.pypa.io/get-pip.py
-            fi
-            sudo ${PYTHON} get-pip.py
-            rm get-pip.py
-        fi
-       ${python} -m pip install pexpect
+       ${PYTHON} -m pip install pexpect
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
         $install cgroupfs-mount
@@ -872,7 +874,7 @@ function usage {
     printf -- ' -v: install Open (V)switch\n' >&2
     printf -- ' -V <version>: install a particular version of Open (V)switch on Ubuntu\n' >&2
     printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2
-    printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
+    printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2    
     printf -- ' -y: install R(y)u Controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2

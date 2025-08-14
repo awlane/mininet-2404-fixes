@@ -1,4 +1,8 @@
 Mininet: Rapid Prototyping for Software Defined Networks
+
+This fork is intended to allow for automatic installation on Ubuntu 24.04 LTS for Mini-NDN.
+This incorporates submitted changes by @lorepap and @Greenscreen23 with my express thanks
+
 ========================================================
 *The best way to emulate almost any network on your laptop!*
 
