@@ -28,9 +28,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-#if !defined(VERSION)
-#define VERSION "(devel)"
-#endif
+#define VERSION "2025-fix"
 
 void usage(char *name)
 {
