@@ -196,16 +196,18 @@ function mn_deps {
 			ethtool help2man python-pyflakes python3-pylint \
                         python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
-        pf=pyflakes
-        pep8=pycodestyle
         # Starting around 20.04, installing pyflakes instead of pyflakes3
         # causes Python 2 to be installed, which is exactly NOT what we want.
 
         $install gcc make socat psmisc xterm ssh iperf telnet \
-                 ethtool help2man $pf pylint $pep8 \
+                 ethtool help2man \
                  net-tools ${PYPKG}-tk
 
-       ${PYTHON} -m pip install pexpect
+        ${PYTHON} -m pip install pylint
+        ${PYTHON} -m pip install pyflakes
+        ${PYTHON} -m pip install pyflakes
+        ${PYTHON} -m pip install pycodestyle
+        ${PYTHON} -m pip install pexpect
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
         $install cgroupfs-mount
